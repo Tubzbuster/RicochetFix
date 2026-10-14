@@ -187,6 +187,7 @@ with Visual Studio. The build instructions will go here once there's code.
   |-- README.md ............ you are here
   |-- DISCLAIMER.md ........ the legal bit
   |-- LICENSE .............. MIT
+  |-- docs/ENGINE-NOTES.md . what the analysis found
   `-- game-files/ .......... PRIVATE ONLY: game binaries for analysis
       |-- README.md ........ what goes here and why
       |-- infinity/ ........ Ricochet Infinity files

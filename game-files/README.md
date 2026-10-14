@@ -27,7 +27,7 @@ install folder is fine too; just drop it into the matching subfolder.
 ================================================================================
   UPLOAD CHECKLIST  (per game)
 ================================================================================
-  [ ]  The main .exe  (e.g. "Ricochet Infinity.exe")
+  [ ]  The main .exe AND Data3.bin (Data3.bin is the actual engine)
   [ ]  Every .dll in the game folder
   [ ]  Any .ini / .cfg / .xml / .txt config files
   [ ]  files.txt  - a folder listing. In the game folder, open Command
