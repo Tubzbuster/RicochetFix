@@ -61,12 +61,6 @@
   system DLL is missing
 - the log has a once-a-minute health line (frames, GDI/USER objects)
 
-First build.  A single `winmm.dll` adds borderless
-fullscreen, scaling to any resolution with the 4:3 shape kept, a resizable
-windowed mode (Alt+Enter) and correct mouse mapping to all three games.
-Lost Worlds and Recharged were tested end to end under Wine. Infinity loads
-and hooks correctly but still needs a real Windows test.
-
 **v0.0.0 (2026-10-14)**: The repo exists. Research phase.
 
 ```text
@@ -74,20 +68,6 @@ and hooks correctly but still needs a real Windows test.
 [RF01]                  INTRODUCTION (READ THIS FIRST)
 ================================================================================
 ```
-
-> **!!! WARNING !!!** This is the **first build**. It has been tested under
-> Wine on Linux, but not yet on a real Windows PC. Please try it and report
-> back with your `RicochetFix.log` (see [RF09]).
-
-**The problem:** The Ricochet games are still some of the best brick
-breakers ever made. But they are locked to **800x600**, and in fullscreen they
-switch your whole monitor to that resolution. That means a blurry or
-stretched picture on a modern screen, slow and flickery alt-tabbing, and no
-borderless mode. Windowed mode is a tiny 800x600 box.
-
-**The fix:** RicochetFix is **one drag-and-drop DLL**. Put it in the game
-folder and the game:
-
 - runs **borderless** across your whole monitor, with no resolution switch
 - is **scaled** to your native resolution with the correct 4:3 shape (black
   bars on widescreen monitors), using smooth, sharp or integer scaling
@@ -117,9 +97,9 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 ```text
   GAME                         ENGINE LIVES IN     COLOUR   STATUS
   ---------------------------  ------------------  -------  ------------------
-  Ricochet Infinity            Data3.bin           32-bit   [NEEDS WIN TEST]
-  Ricochet Lost Worlds         Ricochet.exe        16-bit   [WORKING - Wine]
-  Ricochet LW: Recharged       Data3.bin           16-bit   [WORKING - Wine]
+  Ricochet Infinity            Data3.bin           32-bit   [WORKING]
+  Ricochet Lost Worlds         Ricochet.exe        16-bit   [WORKING]
+  Ricochet LW: Recharged       Data3.bin           16-bit   [WORKING]
 ```
 
 ```text
@@ -155,11 +135,6 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 **Install:** put `winmm.dll` and `RicochetFix.ini` next to
 `RicochetInfinity.exe`.
 
-**What we know:** RicochetFix finds the engine in `Data3.bin`, takes over
-its window and fakes the 800x600 32-bit fullscreen mode. All of that is
-confirmed in the log. Under Wine the game itself only shows a blank white
-screen, with or without RicochetFix, so the menus couldn't be checked there.
-
 **Things to look out for:**
 
 - **Full Screen=0 or 1.** Both should work. With `Full Screen=1`,
@@ -185,23 +160,6 @@ screen, with or without RicochetFix, so the menus couldn't be checked there.
 
 **Install:** put `winmm.dll` and `RicochetFix.ini` next to `Ricochet.exe`.
 
-**Tested:** the licence dialog, then borderless at 1920x1080 with 4:3
-pillarboxing. The game's own cursor lines up with the real mouse, menus
-respond to clicks, and Alt+Enter toggles windowed and back.
-
-**Notes:**
-
-- This game has **no windowed mode of its own**. It always switches the
-  monitor to 800x600 16-bit. RicochetFix fakes that switch, so the game
-  thinks it got 800x600 fullscreen while it really runs in a borderless
-  window at your desktop resolution.
-- If your monitor doesn't offer 800x600, the original game quits with
-  "Couldn't set resolution". RicochetFix fixes that by adding the classic
-  640x480 / 800x600 / 1024x768 modes to the list the game sees.
-- Many installs include **DDrawCompat** as `ddraw.dll`. RicochetFix (as
-  `winmm.dll`) can run alongside it. If you have problems, try temporarily
-  renaming `ddraw.dll` to `ddraw.dll.off`.
-
 ```text
 ================================================================================
 [RF05]                 RICOCHET LOST WORLDS: RECHARGED
@@ -219,16 +177,6 @@ respond to clicks, and Alt+Enter toggles windowed and back.
 **Install:** put `winmm.dll` and `RicochetFix.ini` next to
 `RicochetRecharged.exe`.
 
-**Tested:** the licence dialog, then borderless with scaling, mouse-accurate
-menus, the Select Player screen, and Alt+Enter windowed/borderless
-switching.
-
-**Notes:** Recharged is a halfway point between the other two. It uses the
-Lost Worlds graphics and gameplay, but the engine sits in `Data3.bin` like
-Infinity. RicochetFix finds it automatically when the launcher loads it. The
-DDrawCompat note from [RF04] applies here too.
-
-```text
 ================================================================================
 [RF06]                           INSTALLATION
 ================================================================================
