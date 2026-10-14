@@ -16,7 +16,8 @@
 ================================================================================
   game-files/
   |-- infinity/ ........ everything from the Ricochet Infinity install folder
-  `-- lost-worlds/ ..... everything from the Ricochet Lost Worlds folder
+  |-- lost-worlds/ ..... everything from the Ricochet Lost Worlds folder
+  `-- recharged/ ....... everything from the Lost Worlds: Recharged folder
 ================================================================================
 ```
 
@@ -27,7 +28,8 @@ install folder is fine too; just drop it into the matching subfolder.
 ================================================================================
   UPLOAD CHECKLIST  (per game)
 ================================================================================
-  [ ]  The main .exe AND Data3.bin (Data3.bin is the actual engine)
+  [ ]  The main .exe, plus Data3.bin if there is one (Infinity and Recharged
+       keep the engine in Data3.bin; Lost Worlds keeps it in the .exe)
   [ ]  Every .dll in the game folder
   [ ]  Any .ini / .cfg / .xml / .txt config files
   [ ]  files.txt  - a folder listing. In the game folder, open Command

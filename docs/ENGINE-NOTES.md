@@ -36,65 +36,104 @@ The DLL uses this to recognise the build before patching anything.
 
 ```text
 ================================================================================
-  HOW IT DRAWS
+  RICOCHET LOST WORLDS  (GameHouse release, v1.0.19, 2004)
+================================================================================
+  FILE                      WHAT IT IS
+  ------------------------  ----------------------------------------------------
+  Ricochet.exe              THE ENGINE. Game code is inside the exe (2.4 MB,
+                            image base 0x400000, extra "GARR" section).
+  RLWres.dll                GameHouse trial / licence dialog. Not touched.
+  Ricochet Lost Worlds.CFG  [Options] Screen Width/Height, Use Legacy Color
+                            Mode. No "Full Screen" key: fullscreen only.
+  Data.dat                  Graphics, sound, levels. Not needed.
+================================================================================
+
+================================================================================
+  RICOCHET LOST WORLDS: RECHARGED  (GameHouse release, v1.1.29.0, 2004)
+================================================================================
+  FILE                      WHAT IT IS
+  ------------------------  ----------------------------------------------------
+  RicochetRecharged.exe     Small launcher (55 KB). Loads Data3.bin.
+  Recharged.dll             GameHouse trial / licence dialog. Not touched.
+  Data3.bin                 THE ENGINE. A DLL exporting StartGame, like
+                            Infinity's. Imports ClipCursor/SetCursorPos too.
+  Ricochet Lost Worlds Recharged.CFG   same keys as Lost Worlds + volumes
 ================================================================================
 ```
 
-- **The engine renders in software.** Every frame is drawn on the CPU into
-  an 800x600 frame buffer, using the Anti-Grain Geometry (AGG) library
-  (`CFrame_BlitX_AGG`, `CAggRenderingBufferFrameProperty`, `CBlurRenderer`).
-  There is no Direct3D at all.
-- **Windowed mode** presents each frame through GDI: one `CreateDIBSection`
-  (`0x1008D9AD`) and a single `BitBlt` to the window (`0x1008D9FF`).
-- **Fullscreen mode** uses DirectDraw (`DirectDrawCreate`, the only DDRAW
-  import) to switch the monitor to the game's resolution and blit the frame.
-- **Window creation** is at `0x101BC774`. The class is registered just before
-  it. The window is created as `WS_EX_APPWINDOW` with
-  `WS_POPUP | WS_VISIBLE | WS_SYSMENU` (`0x90080000`). The windowed/fullscreen
-  switch then restyles it with `AdjustWindowRectEx`, `SetWindowLongA` and
-  `SetWindowPos` (`0x101BC845`-`0x101BC9B3`).
-- `ChangeDisplaySettingsA(NULL, 0)` at `0x101BC975` only *restores* the
-  desktop mode on exit.
-- Mouse input arrives as normal window messages (`WM_MOUSEMOVE` etc.) and
-  goes through `ClientToScreen` / `GetClientRect`.
+The installs we were sent also contain `ddraw.dll` = **DDrawCompat v0.7.1**
+(narzoul/DDrawCompat), a third-party DirectDraw compatibility layer that
+players add themselves. It isn't part of the game.
 
 ```text
 ================================================================================
-  BUILT-IN SETTINGS  (Ricochet Infinity.CFG)
-================================================================================
-  [Options]
-  Screen Width=800
-  Screen Height=600
-  Full Screen=1
-  ...
+  WHAT ALL THREE HAVE IN COMMON
 ================================================================================
 ```
 
-The engine also reads `/ScreenWidth`, `/ScreenHeight` and `/ScreenBitDepth`
-command-line style keys, and has a `BAD SCREEN MODE` error. It's still
-unknown whether sizes other than 800x600 actually work or just break the
-layout. **This needs testing on a real PC.**
+- **DirectDraw 1 only.** Each engine imports just `DDRAW!DirectDrawCreate`,
+  and none of them contain the GUIDs for IDirectDraw2/4/7, so they never
+  `QueryInterface` for newer interfaces. Everything goes through the
+  original `IDirectDraw` / `IDirectDrawSurface` vtables.
+- **Startup sequence** (seen in the logs of all three):
+  `SetCooperativeLevel(EXCLUSIVE|FULLSCREEN|ALLOWMODEX)`, then
+  `EnumDisplayModes`, which looks for 800x600 and quits with "Couldn't set
+  resolution" if it isn't listed. Then `SetDisplayMode(800, 600, bpp)` with
+  16-bit for Lost Worlds and Recharged and 32-bit for Infinity. Then
+  `CreateSurface(PRIMARY | FLIP | COMPLEX, 2 back buffers)`.
+- **Software rendering.** Frames are drawn on the CPU (AGG in Infinity) into
+  the back buffer, then flipped.
+- **The same window code.** The window is created with `CreateWindowExA` as
+  `WS_POPUP|WS_VISIBLE|WS_SYSMENU` with `WS_EX_APPWINDOW`, then restyled
+  with `SetWindowLongA` / `SetWindowPos` / `MoveWindow`. Windowed-mode blits
+  are positioned with `GetClientRect` + `ClientToScreen` + `OffsetRect`.
+- **Mouse input is read in the message loop.** The engines look at
+  `WM_MOUSEMOVE` / button messages as they come out of `PeekMessageA`,
+  before `DispatchMessageA`. Subclassing the window procedure is **not**
+  enough to remap coordinates; it has to happen at `PeekMessageA`. The
+  engine draws its own cursor sprite.
+- **The resolution is fixed at 800x600.** Setting `Screen Width=1024` /
+  `Screen Height=768` in Infinity's CFG still gives an 800x600 picture
+  (tested by tubzbuster on Windows).
 
 ```text
 ================================================================================
-  WHAT THIS MEANS FOR THE FIX
+  ENGINE NOTES: INFINITY DETAIL
 ================================================================================
 ```
 
-1. **Proxy DLL name.** `Data3.bin` imports `DDRAW.dll` and `WINMM.dll` from
-   the game folder search path. `winmm.dll` is the safest proxy because it
-   doesn't clash with dgVoodoo2, which also uses `ddraw.dll`. The DLL hooks
-   `Data3.bin`'s imports (IAT) once it has been loaded.
-2. **Borderless windowed.** Force the engine's own windowed mode, then
-   resize its window to cover the monitor as a `WS_POPUP`. The game keeps
-   drawing 800x600. No DirectDraw mode switch happens, so alt-tab is instant.
-3. **Scaling.** Replace the single windowed-mode `BitBlt` with a scaled
-   present. That means aspect-correct 4:3 with black bars, a choice of
-   sharp/smooth/integer scaling, and possibly a GPU (D3D11) present later for
-   quality and speed.
-4. **Mouse.** Map mouse message coordinates from the large window back into
-   the game's 800x600 space, and make `GetClientRect` report 800x600, so the
-   menus and paddle still line up.
-5. **True widescreen** would need the engine to lay out a wider frame buffer.
-   Because the playfield and UI are built for 800x600, this stays a research
-   item until the CFG resolution test above is done.
+- The single GDI `BitBlt` in Infinity's `Data3.bin` (`0x1008D9FF`, next to
+  `CreateDIBSection` at `0x1008D9AD`) copies between two *memory* DCs while
+  building a frame object. It is **not** the on-screen present; that goes
+  through DirectDraw in both windowed and fullscreen mode.
+- Window creation is at `0x101BC774`. The windowed/fullscreen restyle is at
+  `0x101BC845`-`0x101BC9B3`. `ChangeDisplaySettingsA(NULL, 0)` at
+  `0x101BC975` only restores the desktop on exit.
+- `CMouseRawInputWin32` loads Raw Input (`RegisterRawInputDevices` and so on)
+  dynamically for Mouse Party (several mice at once).
+- A Flash 8 player (`FlashPlayerControl.dll` + `Flash8.ocx`) is created as a
+  `WS_CHILD` window (`CreateWindowExA` at `0x1008E348`).
+
+```text
+================================================================================
+  HOW RICOCHETFIX USES THIS
+================================================================================
+```
+
+1. **Loading.** It is installed as `winmm.dll` (all three engines import
+   WINMM), with `ddraw.dll` as a fallback name. The engine is found by
+   behaviour, as the module importing `DDRAW!DirectDrawCreate`: the exe for
+   Lost Worlds, `Data3.bin` otherwise. `LoadLibraryA` is watched so a
+   `Data3.bin` that loads later is still caught.
+2. **Fake fullscreen.** The cooperative level is downgraded to
+   `DDSCL_NORMAL`. `SetDisplayMode` is faked but remembers the depth.
+   `EnumDisplayModes` gets 640x480 / 800x600 / 1024x768 at 16/32-bit added.
+3. **Virtual primary.** The primary flip chain becomes two off-screen
+   800x600 surfaces in the requested pixel format. `Flip`, `Blt`, `Unlock`
+   and `ReleaseDC` on them trigger a present.
+4. **Present.** GDI `StretchBlt` (HALFTONE or COLORONCOLOR) into the real
+   window, with black bars, at the aspect-correct or integer size.
+5. **Coordinates.** For the engine, its window is always 800x600 at 0,0
+   (`GetClientRect`, `GetWindowRect`, identity `ClientToScreen`). Mouse
+   messages and `msg.pt` are mapped at `PeekMessageA`. `SetCursorPos` and
+   `ClipCursor` are mapped back to real screen pixels.

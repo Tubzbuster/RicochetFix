@@ -7,9 +7,11 @@
  | |\ \| | (_| (_) | (__| | | |  __/ |_| |   | |>  <
  \_| \_|_|\___\___/ \___|_| |_|\___|\__\_|   |_/_/\_\
 ================================================================================
-  Games ........ Ricochet Infinity, Ricochet Lost Worlds (+ Recharged)
-  Platform ..... Windows (PC), Wine/Proton should work too
-  Version ...... 0.0.0 (nothing to download yet, research phase)
+  Games ........ Ricochet Infinity
+                 Ricochet Lost Worlds
+                 Ricochet Lost Worlds: Recharged
+  Platform ..... Windows (PC), Wine / Proton / Steam Deck
+  Version ...... 0.1.0 (first build, needs testing on real Windows PCs)
   Author ....... tubzbuster & RicochetFix contributors
   License ...... MIT (see LICENSE and DISCLAIMER.md)
   Updated ...... 2026-10-14
@@ -25,13 +27,17 @@
 ================================================================================
   [RF00] ........ Version History
   [RF01] ........ Introduction (READ THIS FIRST)
-  [RF02] ........ Planned Features
-  [RF03] ........ How It Works (The Proxy DLL)
-  [RF04] ........ The Game Files (What They're For)
-  [RF05] ........ Installation
-  [RF06] ........ For Developers
-  [RF07] ........ Disclaimer & Legal
-  [RF08] ........ Credits
+  [RF02] ........ One DLL, Three Games
+  [RF03] ........ Ricochet Infinity
+  [RF04] ........ Ricochet Lost Worlds
+  [RF05] ........ Ricochet Lost Worlds: Recharged
+  [RF06] ........ Installation
+  [RF07] ........ Settings (RicochetFix.ini)
+  [RF08] ........ How It Works
+  [RF09] ........ Troubleshooting
+  [RF10] ........ For Developers
+  [RF11] ........ Disclaimer & Legal
+  [RF12] ........ Credits
 ================================================================================
 ```
 
@@ -41,8 +47,13 @@
 ================================================================================
 ```
 
-**v0.0.0 (2026-10-14)**: The repo exists. We've set up the folder that the
-game files go in so they can be analysed. No mod to download yet.
+**v0.1.0 (2026-10-14)**: First build. A single `winmm.dll` adds borderless
+fullscreen, scaling to any resolution with the 4:3 shape kept, a resizable
+windowed mode (Alt+Enter) and correct mouse mapping to all three games.
+Lost Worlds and Recharged were tested end to end under Wine. Infinity loads
+and hooks correctly but still needs a real Windows test.
+
+**v0.0.0 (2026-10-14)**: The repo exists. Research phase.
 
 ```text
 ================================================================================
@@ -50,148 +61,293 @@ game files go in so they can be analysed. No mod to download yet.
 ================================================================================
 ```
 
-> **!!! WARNING !!!** RicochetFix is in the **research phase**. There is
-> nothing to install yet. This README describes the plan.
+> **!!! WARNING !!!** This is the **first build**. It has been tested under
+> Wine on Linux, but not yet on a real Windows PC. Please try it and report
+> back with your `RicochetFix.log` (see [RF09]).
 
-**The goal:** Ricochet Infinity and Ricochet Lost Worlds are still two of the
-best brick breakers ever made. But they're from the 4:3, 1024x768 era, so on
-a modern PC you get exclusive fullscreen that minimises when you alt-tab,
-a stretched or tiny picture on widescreen monitors, and no borderless
-windowed mode at all.
+**The problem:** The Ricochet games are still some of the best brick
+breakers ever made. But they are locked to **800x600**, and in fullscreen they
+switch your whole monitor to that resolution. That means a blurry or
+stretched picture on a modern screen, slow and flickery alt-tabbing, and no
+borderless mode. Windowed mode is a tiny 800x600 box.
 
-**What RicochetFix is:** a single drag-and-drop DLL. Drop it in the game
-folder next to the `.exe` and the game loads it automatically. There's no
-launcher, no injector and no patching of the game files on disk. Delete the
-DLL and the game is exactly as it was.
+**The fix:** RicochetFix is **one drag-and-drop DLL**. Put it in the game
+folder and the game:
 
-**Both games, one fix:** Infinity and Lost Worlds run on the same Reflexive
-Entertainment engine. The DLL works out which game it has been loaded into
-and applies the matching patches.
+- runs **borderless** across your whole monitor, with no resolution switch
+- is **scaled** to your native resolution with the correct 4:3 shape (black
+  bars on widescreen monitors), using smooth, sharp or integer scaling
+- switches to a **resizable window** and back with **Alt+Enter**
+- **alt-tabs instantly** and never minimises itself
+- keeps **mouse clicks lined up** with the scaled picture
 
-```text
-================================================================================
-[RF02]                        PLANNED FEATURES
-================================================================================
-```
+Nothing on disk is patched. Delete the DLL and the game is exactly as it was.
 
-```text
-  FEATURE                                   STATUS
-  ----------------------------------------  ------------------------------
-  Borderless windowed (fullscreen window)    [PLANNED]
-  Plain windowed mode, any size              [PLANNED]
-  Native desktop resolution rendering        [PLANNED]
-  Correct aspect ratio (pillarboxed 4:3)     [PLANNED]
-  Sharp scaling (no blurry stretch)          [PLANNED]
-  Alt-tab without minimising / crashing      [PLANNED]
-  RicochetFix.ini for all settings           [PLANNED]
-  Log file for troubleshooting               [PLANNED]
-  True widescreen (use the side space)       [RESEARCH]   depends on engine
-  Ricochet Infinity support                  [RESEARCH]
-  Ricochet Lost Worlds support               [RESEARCH]
-  Ricochet Recharged support                 [MAYBE]      same engine
-```
-
-The playfield in these games is almost certainly a fixed 4:3 layout. So the
-first goal is a **sharp, correctly proportioned picture at your native
-resolution**, with black bars at the sides. True widescreen, where the extra
-side space is actually used, depends on how the renderer and UI are built.
-We'll only know once the executables have been analysed.
+**Why not true widescreen?** All three games always draw an 800x600 picture.
+Testing showed the engine ignores other sizes in its `.CFG` file. Every
+menu and level is built for that 4:3 canvas, so there's nothing to show in
+the extra side space. Sharp, correctly shaped scaling is the best result.
 
 ```text
 ================================================================================
-[RF03]                  HOW IT WORKS (THE PROXY DLL)
+[RF02]                      ONE DLL, THREE GAMES
 ================================================================================
 ```
 
-When a Windows game starts, it loads the system DLLs it needs, such as
-`ddraw.dll`, `d3d8.dll`, `d3d9.dll`, `dinput8.dll` or `winmm.dll`. Windows
-looks in the game's own folder **before** the system folder. So a DLL with the
-same name placed next to the `.exe` gets loaded instead. That's a
-**proxy DLL**:
+All three games run on the same Reflexive Entertainment engine. They use the
+same DirectDraw 1 graphics code, the same window code and the same `.CFG`
+settings file. RicochetFix works by intercepting those shared Windows and
+DirectDraw calls, **not** by patching hardcoded addresses. So the **same
+`winmm.dll` works for all three**, and it finds the engine automatically.
 
 ```text
-   Ricochet Infinity.exe
-          |
-          |  "load d3dX.dll please"
-          v
-   +--------------------+        forwards every call        +----------------+
-   |  RicochetFix  DLL  |  ------------------------------>  |  the real      |
-   |  (game folder)     |                                   |  system DLL    |
-   +--------------------+                                   +----------------+
-          |
-          +-- hooks window creation ......... borderless / windowed
-          +-- hooks display mode changes .... no more resolution switching
-          +-- hooks the renderer setup ...... render at native res, scale to fit
-          +-- patches engine code in memory . widescreen / aspect (if possible)
+  GAME                         ENGINE LIVES IN     COLOUR   STATUS
+  ---------------------------  ------------------  -------  ------------------
+  Ricochet Infinity            Data3.bin           32-bit   [NEEDS WIN TEST]
+  Ricochet Lost Worlds         Ricochet.exe        16-bit   [WORKING - Wine]
+  Ricochet LW: Recharged       Data3.bin           16-bit   [WORKING - Wine]
 ```
 
-Which DLL name we use depends on what the game imports. Finding that out is
-step one of the analysis in [RF04].
-
 ```text
-================================================================================
-[RF04]               THE GAME FILES (WHAT THEY'RE FOR)
-================================================================================
-```
+  FEATURE                                   INF      LW       LWR
+  ----------------------------------------  -------  -------  -------
+  Borderless fullscreen, no mode switch     [?]      [OK]     [OK]
+  Scaled to native res, 4:3 kept            [?]      [OK]     [OK]
+  Smooth / sharp / integer scaling          [?]      [OK]     [OK]
+  Mouse lines up with scaled picture        [?]      [OK]     [OK]
+  Alt+Enter borderless <-> windowed         [?]      [OK]     [OK]
+  Resizable window                          [?]      [OK]     [OK]
+  Missing 800x600 mode on monitor handled   [OK]     [OK]     [OK]
+  True widescreen                           [NO]     [NO]     [NO]
 
-To build the fix we need to look at the game's own code. **The game files are
-only used for analysis**: disassembling the executable to find where it
-creates its window, sets the display mode and sets up the renderer. Full
-details, the folder layout and an upload checklist are in
-[game-files/README.md](game-files/README.md).
-
-```text
-  FILE TYPE                WHY WE NEED IT
-  -----------------------  --------------------------------------------------
-  The game .exe            The engine itself. Where every hook and patch goes.
-  .dll files in the folder Tells us what the game loads (DirectX version,
-                           sound library, DRM wrapper, etc.).
-  .ini / .cfg / .xml       Existing resolution / windowed settings we can
-                           reuse instead of patching.
-  Folder listing           So we know the install layout and file versions.
-  Level / art / sound data NOT NEEDED. Please don't upload it.
-```
-
-> **!!! IMPORTANT !!!** The games are copyrighted by their owners. **Only
-> upload the game files to a PRIVATE repository**, and never include them in
-> a release. RicochetFix releases will only ever contain our own DLL.
-
-```text
-================================================================================
-[RF05]                           INSTALLATION
-================================================================================
-```
-
-Nothing to install yet. When there is, it will look like this:
-
-```text
-  1. Download RicochetFix-x.y.z.zip from the Releases page.
-  2. Extract the DLL and RicochetFix.ini into the game folder,
-     next to "Ricochet Infinity.exe" or "Ricochet Lost Worlds.exe".
-  3. (Optional) edit RicochetFix.ini to pick borderless/windowed and size.
-  4. Play. To uninstall, delete the two files.
+  [OK] tested under Wine   [?] hooks load fine, gameplay not yet verified
 ```
 
 ```text
 ================================================================================
-[RF06]                          FOR DEVELOPERS
+[RF03]                        RICOCHET INFINITY
+================================================================================
+  Released ..... 2007, Reflexive Entertainment
+  Launcher ..... RicochetInfinity.exe   (tiny loader, no game code)
+  Engine ....... Data3.bin              (a DLL, exports StartGame)
+  Settings ..... Ricochet Infinity.CFG  (Screen Width/Height, Full Screen)
+  Graphics ..... DirectDraw 1, 800x600, 32-bit, software rendered (AGG)
+  Extras ....... Flash 8 front end, online level catalog (libcurl),
+                 Raw Input for multi-mouse "Mouse Party"
+  Status ....... [NEEDS WINDOWS TEST]
 ================================================================================
 ```
 
-The plan is a small C/C++ DLL that can be cross-compiled from Linux with
-MinGW (`i686-w64-mingw32`, because the games are 32-bit) or built on Windows
-with Visual Studio. The build instructions will go here once there's code.
+**Install:** put `winmm.dll` and `RicochetFix.ini` next to
+`RicochetInfinity.exe`.
+
+**What we know:** RicochetFix finds the engine in `Data3.bin`, takes over
+its window and fakes the 800x600 32-bit fullscreen mode. All of that is
+confirmed in the log. Under Wine the game itself only shows a blank white
+screen, with or without RicochetFix, so the menus couldn't be checked there.
+
+**Things to look out for:**
+
+- **Full Screen=0 or 1.** Both should work. With `Full Screen=1`,
+  RicochetFix replaces fullscreen with borderless. With `Full Screen=0`, it
+  takes over the game's own small window.
+- **Mouse Party** uses Raw Input, which reports mouse *movement* rather than
+  position. It isn't affected by scaling, but please report how it feels.
+- **Flash screens** (intros, ads in trial builds) are drawn by a separate
+  Flash child window. They may show unscaled in the top-left corner.
+
+```text
+================================================================================
+[RF04]                       RICOCHET LOST WORLDS
+================================================================================
+  Released ..... 2004, Reflexive Entertainment
+  Executable ... Ricochet.exe           (the engine is inside the exe)
+  Trial DLL .... RLWres.dll             (GameHouse trial / licence screen)
+  Settings ..... Ricochet Lost Worlds.CFG
+  Graphics ..... DirectDraw 1, 800x600, 16-bit, exclusive fullscreen only
+  Status ....... [WORKING - tested under Wine]
+================================================================================
+```
+
+**Install:** put `winmm.dll` and `RicochetFix.ini` next to `Ricochet.exe`.
+
+**Tested:** the licence dialog, then borderless at 1920x1080 with 4:3
+pillarboxing. The game's own cursor lines up with the real mouse, menus
+respond to clicks, and Alt+Enter toggles windowed and back.
+
+**Notes:**
+
+- This game has **no windowed mode of its own**. It always switches the
+  monitor to 800x600 16-bit. RicochetFix fakes that switch, so the game
+  thinks it got 800x600 fullscreen while it really runs in a borderless
+  window at your desktop resolution.
+- If your monitor doesn't offer 800x600, the original game quits with
+  "Couldn't set resolution". RicochetFix fixes that by adding the classic
+  640x480 / 800x600 / 1024x768 modes to the list the game sees.
+- Many installs include **DDrawCompat** as `ddraw.dll`. RicochetFix (as
+  `winmm.dll`) can run alongside it. If you have problems, try temporarily
+  renaming `ddraw.dll` to `ddraw.dll.off`.
+
+```text
+================================================================================
+[RF05]                 RICOCHET LOST WORLDS: RECHARGED
+================================================================================
+  Released ..... 2004, Reflexive Entertainment
+  Launcher ..... RicochetRecharged.exe  (small loader)
+  Trial DLL .... Recharged.dll          (GameHouse trial / licence screen)
+  Engine ....... Data3.bin              (a DLL, exports StartGame)
+  Settings ..... Ricochet Lost Worlds Recharged.CFG
+  Graphics ..... DirectDraw 1, 800x600, 16-bit, exclusive fullscreen
+  Status ....... [WORKING - tested under Wine]
+================================================================================
+```
+
+**Install:** put `winmm.dll` and `RicochetFix.ini` next to
+`RicochetRecharged.exe`.
+
+**Tested:** the licence dialog, then borderless with scaling, mouse-accurate
+menus, the Select Player screen, and Alt+Enter windowed/borderless
+switching.
+
+**Notes:** Recharged is a halfway point between the other two. It uses the
+Lost Worlds graphics and gameplay, but the engine sits in `Data3.bin` like
+Infinity. RicochetFix finds it automatically when the launcher loads it. The
+DDrawCompat note from [RF04] applies here too.
+
+```text
+================================================================================
+[RF06]                           INSTALLATION
+================================================================================
+```
+
+```text
+  1. Download RicochetFix-x.y.z.zip from the Releases page (or build it,
+     see [RF10]).
+  2. Extract winmm.dll and RicochetFix.ini into the game folder:
+
+       Ricochet Infinity ............ next to RicochetInfinity.exe
+       Ricochet Lost Worlds ......... next to Ricochet.exe
+       Lost Worlds: Recharged ....... next to RicochetRecharged.exe
+
+  3. Start the game normally. A RicochetFix.log file appearing in the
+     folder means it's working.
+  4. To uninstall, delete winmm.dll and RicochetFix.ini.
+```
+
+**Linux / Steam Deck (Wine or Proton):** Wine prefers its own `winmm.dll`,
+so tell it to load ours. In Steam, set the game's launch options to:
+
+```text
+  WINEDLLOVERRIDES="winmm=n,b" %command%
+```
+
+```text
+================================================================================
+[RF07]                    SETTINGS (RicochetFix.ini)
+================================================================================
+  KEY              VALUES                              DEFAULT
+  ---------------  ----------------------------------  -----------
+  Mode             borderless / windowed / off         borderless
+  Scaling          smooth / sharp / integer / stretch  smooth
+  WindowScale      0 = auto (~85% of screen), 1, 2..   0
+  VSync            1 / 0                               1
+  ClipCursor       1 / 0  (keep mouse in the picture)  1
+  AltEnterToggle   1 / 0                               1
+  Log              1 / 0  ([Debug] section)            1
+================================================================================
+```
+
+```text
+================================================================================
+[RF08]                           HOW IT WORKS
+================================================================================
+```
+
+Windows looks in the game folder for a DLL before the system folder. So our
+`winmm.dll` loads instead of the real one, and passes every normal `winmm`
+call straight through to it. Once loaded, it hooks the engine:
+
+```text
+   game  ---- DirectDrawCreate / SetDisplayMode / CreateSurface ---->  ddraw
+     |             |
+     |             +-- RicochetFix: "sure, you're now 800x600 fullscreen"
+     |                 (it isn't: the monitor stays at its own resolution)
+     |
+     |   draws its 800x600 frame into a *virtual* screen surface
+     v
+   RicochetFix scales that frame into a borderless window
+   (4:3, black bars, smooth/sharp/integer), and maps the mouse back
+   from screen pixels to the game's 800x600 pixels.
+```
+
+- **DirectDraw.** Exclusive fullscreen is turned into normal windowed
+  DirectDraw. `SetDisplayMode` is faked in the colour depth the game asked
+  for (16 or 32-bit). The "primary surface" and its back buffer become
+  ordinary 800x600 off-screen surfaces that RicochetFix shows on screen.
+- **Window.** The game's own window is restyled as borderless fullscreen or
+  a normal resizable window. The game is told its window is still 800x600.
+- **Mouse.** The engines read mouse messages directly from their message
+  loop, so coordinates are converted there, as they come out of the queue.
+- **Missing modes.** The classic 4:3 modes are added to the mode list if
+  your monitor doesn't report them.
+
+Engine notes from the reverse engineering are in
+[docs/ENGINE-NOTES.md](docs/ENGINE-NOTES.md).
+
+```text
+================================================================================
+[RF09]                         TROUBLESHOOTING
+================================================================================
+  PROBLEM                         TRY THIS
+  ------------------------------  ----------------------------------------------
+  No RicochetFix.log appears      The DLL isn't loading. Check it is next to
+                                  the right .exe (see [RF06]). Or rename
+                                  winmm.dll to ddraw.dll (both names work, but
+                                  not if DDrawCompat/dgVoodoo is ddraw.dll).
+  Black or garbled picture        Send the log. Try Mode=windowed. Try without
+                                  DDrawCompat / dgVoodoo.
+  Mouse is offset                 Send the log and your screen resolution and
+                                  Windows display scaling (100%, 150%...).
+  Picture is blurry               Scaling=sharp or Scaling=integer.
+  Game runs too fast / slow       Try VSync=0 or VSync=1 and report it.
+  Want the old behaviour back     Mode=off, or delete winmm.dll.
+================================================================================
+```
+
+When reporting a problem, open an issue and attach `RicochetFix.log` from
+the game folder. Say which game it is and what you expected to see.
+
+```text
+================================================================================
+[RF10]                          FOR DEVELOPERS
+================================================================================
+```
+
+Plain C, cross-compiled with MinGW-w64 (32-bit, because the games are
+32-bit). From Linux:
+
+```bash
+sudo apt install gcc-mingw-w64-i686 make python3
+make            # -> build/winmm.dll
+make dist       # -> build/RicochetFix-<version>.zip
+```
 
 ```text
   RicochetFix/
-  |-- README.md ............ you are here
-  |-- DISCLAIMER.md ........ the legal bit
-  |-- LICENSE .............. MIT
-  |-- docs/ENGINE-NOTES.md . what the analysis found
-  `-- game-files/ .......... PRIVATE ONLY: game binaries for analysis
-      |-- README.md ........ what goes here and why
-      |-- infinity/ ........ Ricochet Infinity files
-      `-- lost-worlds/ ..... Ricochet Lost Worlds files
+  |-- README.md ............. you are here
+  |-- RicochetFix.ini ....... default settings shipped with the DLL
+  |-- Makefile .............. build
+  |-- src/
+  |   |-- main.c ............ DllMain, finds the engine module
+  |   |-- ddraw_hooks.c ..... fake fullscreen, virtual primary surface
+  |   |-- window.c .......... borderless/windowed, scaling, mouse mapping
+  |   |-- proxy.c ........... forwards winmm/ddraw exports to the real DLL
+  |   |-- iat.c ............. import table patching
+  |   |-- config.c, log.c ... RicochetFix.ini and RicochetFix.log
+  |   `-- *_exports.txt ..... export lists (tools/gen_proxy.py -> stubs)
+  |-- dist/README.txt ....... readme shipped in the release zip
+  |-- docs/ENGINE-NOTES.md .. reverse engineering notes
+  `-- game-files/ ........... PRIVATE ONLY: game binaries for analysis
 ```
 
 Pull requests are welcome. It's early days, so open an issue first for
@@ -199,7 +355,7 @@ anything big.
 
 ```text
 ================================================================================
-[RF07]                         DISCLAIMER & LEGAL
+[RF11]                         DISCLAIMER & LEGAL
 ================================================================================
 ```
 
@@ -210,20 +366,21 @@ liable for any damage, data loss, lost save games, or other consequences of
 using it.
 
 RicochetFix is an **unofficial, fan-made project**. It isn't affiliated with,
-endorsed by, sponsored by, or approved by Reflexive Entertainment, Amazon, or
-any publisher or store of the Ricochet games. It contains no game code or
-artwork and doesn't circumvent DRM or any other technical protection. You
-need your own legitimate copy of the game.
+endorsed by, sponsored by, or approved by Reflexive Entertainment, Amazon,
+GameHouse, or any publisher or store of the Ricochet games. It contains no
+game code or artwork and doesn't circumvent DRM, trial limits or any other
+technical protection. You need your own legitimate copy of the game.
 
 Read the full text in [DISCLAIMER.md](DISCLAIMER.md).
 
 ```text
 ================================================================================
-[RF08]                              CREDITS
+[RF12]                              CREDITS
 ================================================================================
   * Reflexive Entertainment ............ for making the best brick breakers
   * The Ricochet level-making community . for keeping the games alive
-  * dgVoodoo2, DxWnd & ThirteenAG ...... for showing old games can be saved
+  * DDrawCompat, dgVoodoo2, DxWnd ...... for showing old games can be saved
+  * The Wine project ................... for being our test bench
   * GameFAQs FAQ writers of the 2000s ... for the vibes
 ================================================================================
         This document Copyright (c) 2026 tubzbuster & RicochetFix contributors
@@ -234,7 +391,7 @@ Read the full text in [DISCLAIMER.md](DISCLAIMER.md).
 <br>
 
 <p align="center"><sub><sup>
-Ricochet, Ricochet Infinity, Ricochet Lost Worlds and Ricochet Recharged are trademarks of their respective owners.
+Ricochet, Ricochet Infinity, Ricochet Lost Worlds and Ricochet Lost Worlds: Recharged are trademarks of their respective owners.
 All other trademarks are the property of their respective owners and are used here for identification purposes only.
 RicochetFix is not affiliated with, endorsed by, or sponsored by any of these companies.
 </sup></sub></p>
