@@ -1,0 +1,16 @@
+# Build output
+build/
+bin/
+obj/
+*.o
+*.obj
+*.dll
+*.exp
+*.lib
+*.pdb
+*.log
+.DS_Store
+Thumbs.db
+
+# Game binaries ARE allowed inside game-files/ (private repo only)
+!game-files/**

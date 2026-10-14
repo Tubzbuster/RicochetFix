@@ -1,0 +1,6 @@
+# Treat game binaries and archives as binary, never diff or normalise them
+*.exe binary
+*.dll binary
+*.rar binary
+*.zip binary
+*.7z  binary
