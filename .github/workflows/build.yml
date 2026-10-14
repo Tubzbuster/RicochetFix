@@ -6,6 +6,11 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Publish a GitHub release (tag v<version> from src/rf.h)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -19,14 +24,23 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-i686 zip
       - name: Build
         run: make dist
+      - name: Read version
+        id: ver
+        run: echo "version=$(sed -n 's/^#define RF_VERSION "\(.*\)"/\1/p' src/rf.h)" >> "$GITHUB_OUTPUT"
+      - name: Checksums
+        run: cd build && sha256sum RicochetFix-*.zip dist/winmm.dll | tee SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: RicochetFix
+          name: RicochetFix-${{ steps.ver.outputs.version }}
           path: build/dist/
-      - name: Publish release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release
         uses: softprops/action-gh-release@v2
         with:
-          name: RicochetFix ${{ github.ref_name }}
+          tag_name: v${{ steps.ver.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: RicochetFix v${{ steps.ver.outputs.version }}
           body_path: dist/RELEASE_NOTES.md
-          files: build/RicochetFix-*.zip
+          files: |
+            build/RicochetFix-*.zip
+            build/SHA256SUMS.txt
