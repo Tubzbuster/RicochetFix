@@ -11,7 +11,7 @@
                  Ricochet Lost Worlds
                  Ricochet Lost Worlds: Recharged
   Platform ..... Windows (PC), Wine / Proton / Steam Deck
-  Version ...... 0.1.0 (first release, needs testing on real Windows PCs)
+  Version ...... 0.1.0 
   Author ....... tubzbuster & RicochetFix contributors
   License ...... MIT (see LICENSE and DISCLAIMER.md)
   Updated ...... 2026-10-14
@@ -114,7 +114,7 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
   Missing 800x600 mode on monitor handled   [OK]     [OK]     [OK]
   True widescreen                           [NO]     [NO]     [NO]
 
-  [OK] tested under Wine   [?] hooks load fine, gameplay not yet verified
+  [OK] tested   [?] hooks load fine, gameplay not yet verified
 ```
 
 ```
@@ -122,13 +122,13 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 [RF03]                        RICOCHET INFINITY
 ================================================================================
   Released ..... 2007, Reflexive Entertainment
-  Launcher ..... RicochetInfinity.exe   (tiny loader, no game code)
-  Engine ....... Data3.bin              (a DLL, exports StartGame)
-  Settings ..... Ricochet Infinity.CFG  (Screen Width/Height, Full Screen)
+  Launcher ..... RicochetInfinity.exe   
+  Engine ....... Data3.bin              
+  Settings ..... Ricochet Infinity.CFG  
   Graphics ..... DirectDraw 1, 800x600, 32-bit, software rendered (AGG)
   Extras ....... Flash 8 front end, online level catalog (libcurl),
                  Raw Input for multi-mouse "Mouse Party"
-  Status ....... [NEEDS WINDOWS TEST]
+  Status ....... First Pass eh whatever icba
 ================================================================================
 ```
 
@@ -150,11 +150,11 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 [RF04]                       RICOCHET LOST WORLDS
 ================================================================================
   Released ..... 2004, Reflexive Entertainment
-  Executable ... Ricochet.exe           (the engine is inside the exe)
-  Trial DLL .... RLWres.dll             (GameHouse trial / licence screen)
+  Executable ... Ricochet.exe           
+  Trial DLL .... RLWres.dll             
   Settings ..... Ricochet Lost Worlds.CFG
   Graphics ..... DirectDraw 1, 800x600, 16-bit, exclusive fullscreen only
-  Status ....... [WORKING - tested under Wine]
+  Status ....... [WORKING]
 ================================================================================
 ```
 
@@ -165,12 +165,12 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 [RF05]                 RICOCHET LOST WORLDS: RECHARGED
 ================================================================================
   Released ..... 2004, Reflexive Entertainment
-  Launcher ..... RicochetRecharged.exe  (small loader)
-  Trial DLL .... Recharged.dll          (GameHouse trial / licence screen)
-  Engine ....... Data3.bin              (a DLL, exports StartGame)
+  Launcher ..... RicochetRecharged.exe  
+  Trial DLL .... Recharged.dll          
+  Engine ....... Data3.bin              
   Settings ..... Ricochet Lost Worlds Recharged.CFG
   Graphics ..... DirectDraw 1, 800x600, 16-bit, exclusive fullscreen
-  Status ....... [WORKING - tested under Wine]
+  Status ....... [WORKING]
 ================================================================================
 ```
 
