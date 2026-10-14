@@ -21,7 +21,7 @@
   the good old days. Use Ctrl+F with the codes below to jump to a section.
 ```
 
-```text
+```
 ================================================================================
                            TABLE OF CONTENTS
 ================================================================================
@@ -41,7 +41,7 @@
 ================================================================================
 ```
 
-```text
+```
 ================================================================================
 [RF00]                         VERSION HISTORY
 ================================================================================
@@ -63,7 +63,7 @@
 
 **v0.0.0 (2026-10-14)**: The repo exists. Research phase.
 
-```text
+```
 ================================================================================
 [RF01]                  INTRODUCTION (READ THIS FIRST)
 ================================================================================
@@ -82,7 +82,7 @@ Testing showed the engine ignores other sizes in its `.CFG` file. Every
 menu and level is built for that 4:3 canvas, so there's nothing to show in
 the extra side space. Sharp, correctly shaped scaling is the best result.
 
-```text
+```
 ================================================================================
 [RF02]                      ONE DLL, THREE GAMES
 ================================================================================
@@ -94,7 +94,7 @@ settings file. RicochetFix works by intercepting those shared Windows and
 DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 `winmm.dll` works for all three**, and it finds the engine automatically.
 
-```text
+```
   GAME                         ENGINE LIVES IN     COLOUR   STATUS
   ---------------------------  ------------------  -------  ------------------
   Ricochet Infinity            Data3.bin           32-bit   [WORKING]
@@ -102,7 +102,7 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
   Ricochet LW: Recharged       Data3.bin           16-bit   [WORKING]
 ```
 
-```text
+```
   FEATURE                                   INF      LW       LWR
   ----------------------------------------  -------  -------  -------
   Borderless fullscreen, no mode switch     [?]      [OK]     [OK]
@@ -117,7 +117,7 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
   [OK] tested under Wine   [?] hooks load fine, gameplay not yet verified
 ```
 
-```text
+```
 ================================================================================
 [RF03]                        RICOCHET INFINITY
 ================================================================================
@@ -145,7 +145,7 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 - **Flash screens** (intros, ads in trial builds) are drawn by a separate
   Flash child window. They may show unscaled in the top-left corner.
 
-```text
+```
 ================================================================================
 [RF04]                       RICOCHET LOST WORLDS
 ================================================================================
@@ -160,7 +160,7 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 
 **Install:** put `winmm.dll` and `RicochetFix.ini` next to `Ricochet.exe`.
 
-```text
+```
 ================================================================================
 [RF05]                 RICOCHET LOST WORLDS: RECHARGED
 ================================================================================
@@ -199,11 +199,11 @@ DirectDraw calls, **not** by patching hardcoded addresses. So the **same
 **Linux / Steam Deck (Wine or Proton):** Wine prefers its own `winmm.dll`,
 so tell it to load ours. In Steam, set the game's launch options to:
 
-```text
+```
   WINEDLLOVERRIDES="winmm=n,b" %command%
 ```
 
-```text
+```
 ================================================================================
 [RF07]                    SETTINGS (RicochetFix.ini)
 ================================================================================
@@ -219,7 +219,7 @@ so tell it to load ours. In Steam, set the game's launch options to:
 ================================================================================
 ```
 
-```text
+```
 ================================================================================
 [RF08]                           HOW IT WORKS
 ================================================================================
@@ -229,7 +229,7 @@ Windows looks in the game folder for a DLL before the system folder. So our
 `winmm.dll` loads instead of the real one, and passes every normal `winmm`
 call straight through to it. Once loaded, it hooks the engine:
 
-```text
+```
    game  ---- DirectDrawCreate / SetDisplayMode / CreateSurface ---->  ddraw
      |             |
      |             +-- RicochetFix: "sure, you're now 800x600 fullscreen"
@@ -256,7 +256,7 @@ call straight through to it. Once loaded, it hooks the engine:
 Engine notes from the reverse engineering are in
 [docs/ENGINE-NOTES.md](docs/ENGINE-NOTES.md).
 
-```text
+```
 ================================================================================
 [RF09]                         TROUBLESHOOTING
 ================================================================================
@@ -281,7 +281,7 @@ the game folder. Once a minute the log writes a `Health:` line with the frame
 rate and the GDI/USER object counts. Those counts should stay flat during a
 long session. If they keep climbing, please report it. Say which game it is and what you expected to see.
 
-```text
+```
 ================================================================================
 [RF10]                          FOR DEVELOPERS
 ================================================================================
@@ -290,13 +290,13 @@ long session. If they keep climbing, please report it. Say which game it is and 
 Plain C, cross-compiled with MinGW-w64 (32-bit, because the games are
 32-bit). From Linux:
 
-```bash
+```
 sudo apt install gcc-mingw-w64-i686 make python3
 make            # -> build/winmm.dll
 make dist       # -> build/RicochetFix-<version>.zip
 ```
 
-```text
+```
   RicochetFix/
   |-- README.md ............. you are here
   |-- RicochetFix.ini ....... default settings shipped with the DLL
@@ -337,7 +337,7 @@ technical protection. You need your own legitimate copy of the game.
 
 Read the full text in [DISCLAIMER.md](DISCLAIMER.md).
 
-```text
+```
 ================================================================================
 [RF12]                              CREDITS
 ================================================================================
