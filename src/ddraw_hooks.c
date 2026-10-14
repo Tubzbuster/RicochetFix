@@ -23,7 +23,7 @@
 
 typedef struct { IDirectDrawVtbl *vt; IDirectDrawVtbl orig; } DDVT;
 typedef struct { IDirectDrawSurfaceVtbl *vt; IDirectDrawSurfaceVtbl orig; } SurfVT;
-typedef struct { IDirectDrawSurface *s; IDirectDrawSurface *back; int isBack; } Tracked;
+typedef struct { IDirectDrawSurface *s; IDirectDrawSurface *back; IDirectDraw *dd; int isBack; } Tracked;
 
 static DDVT    g_ddvt[MAX_VT];   static int g_nddvt;
 static SurfVT  g_svt[MAX_VT];    static int g_nsvt;
@@ -46,6 +46,7 @@ static int MakePixelFormat(DWORD bpp, DDPIXELFORMAT *pf)
     case 24:
     case 32: pf->dwRBitMask = 0xFF0000; pf->dwGBitMask = 0x00FF00; pf->dwBBitMask = 0x0000FF; return 1;
     }
+    ZeroMemory(pf, sizeof(*pf));  /* unsupported depth: don't force a format at all */
     return 0;
 }
 
@@ -100,18 +101,20 @@ static Tracked *FindFront(IDirectDrawSurface *s)
     return t && !t->isBack ? t : NULL;
 }
 
-static void Track(IDirectDrawSurface *s, IDirectDrawSurface *back, int isBack)
+static int Track(IDirectDraw *dd, IDirectDrawSurface *s, IDirectDrawSurface *back, int isBack)
 {
     int i;
     for (i = 0; i < MAX_TRACKED; i++) {
         if (!g_tr[i].s) {
             g_tr[i].s = s;
             g_tr[i].back = back;
+            g_tr[i].dd = dd;
             g_tr[i].isBack = isBack;
-            return;
+            return 1;
         }
     }
     RF_Log("WARNING: too many tracked surfaces");
+    return 0;
 }
 
 static void Untrack(IDirectDrawSurface *s)
@@ -131,12 +134,21 @@ static ULONG WINAPI s_Release(IDirectDrawSurface *s)
     const IDirectDrawSurfaceVtbl *o = SO(s);
     ULONG r = o->Release(s);
     if (t && r == 0) {
+        int isBack = t->isBack, i;
         Untrack(s);
-        if (back) {
-            Untrack(back);
-            SO(back)->Release(back);
+        if (isBack) {
+            /* The game released the back buffer more often than it got it:
+             * make sure the front no longer points at the freed surface. */
+            for (i = 0; i < MAX_TRACKED; i++)
+                if (g_tr[i].back == s)
+                    g_tr[i].back = NULL;
+        } else {
+            if (back) {
+                Untrack(back);
+                SO(back)->Release(back);  /* drop the reference we kept */
+            }
+            RF_Log("Virtual primary surface released");
         }
-        RF_Log("Virtual primary surface released");
     }
     return r;
 }
@@ -323,6 +335,15 @@ static ULONG WINAPI dd_Release(IDirectDraw *dd)
         for (i = 0; i < MAX_DD; i++)
             if (g_dd[i] == dd)
                 g_dd[i] = NULL;
+        /* DirectDraw frees every surface it created when the object goes
+         * away. Forget ours so nothing (e.g. a late WM_PAINT) touches them
+         * and a new surface at a reused address isn't mistaken for one. */
+        for (i = 0; i < MAX_TRACKED; i++) {
+            if (g_tr[i].s && g_tr[i].dd == dd) {
+                RF_ForgetSurface(g_tr[i].s);
+                ZeroMemory(&g_tr[i], sizeof(g_tr[i]));
+            }
+        }
     }
     return r;
 }
@@ -384,7 +405,7 @@ static HRESULT WINAPI dd_FlipToGDISurface(IDirectDraw *dd)
 /* Modern monitors (and Wine's virtual desktops) often don't list the old
  * 4:3 modes, and the engine refuses to start without 800x600. The mode
  * switch is faked anyway, so add the classic modes to the list. */
-#define MAX_MODES 256
+#define MAX_MODES 1024
 typedef struct { DDSURFACEDESC m[MAX_MODES]; int n; } ModeList;
 
 static HRESULT WINAPI CollectMode(LPDDSURFACEDESC d, LPVOID ctx)
@@ -482,8 +503,13 @@ static HRESULT WINAPI dd_EnumDisplayModes(IDirectDraw *dd, DWORD flags, LPDDSURF
     return r;
 }
 
-static HRESULT CreatePlain(IDirectDraw *dd, DWORD memCaps, IDirectDrawSurface **out)
+/* The virtual surfaces live in system memory: they can never be "lost"
+ * (alt-tab, lock screen, UAC prompt) and the CPU renderer and GDI read and
+ * write them fastest there. A real flip chain would restore its back buffer
+ * together with the front; two separate video memory surfaces wouldn't. */
+static HRESULT CreatePlain(IDirectDraw *dd, IDirectDrawSurface **out)
 {
+    const DWORD memCaps = DDSCAPS_SYSTEMMEMORY;
     DDSURFACEDESC sd;
     HRESULT r;
     ZeroMemory(&sd, sizeof(sd));
@@ -497,8 +523,8 @@ static HRESULT CreatePlain(IDirectDraw *dd, DWORD memCaps, IDirectDrawSurface **
         sd.ddpfPixelFormat = g_fakePF;
     }
     r = DO(dd)->CreateSurface(dd, &sd, out, NULL);
-    if (r != DD_OK && memCaps != DDSCAPS_SYSTEMMEMORY) {
-        sd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+    if (r != DD_OK) {
+        sd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;  /* let the driver pick */
         r = DO(dd)->CreateSurface(dd, &sd, out, NULL);
     }
     if (r == DD_OK) {
@@ -515,7 +541,6 @@ static HRESULT WINAPI dd_CreateSurface(IDirectDraw *dd, LPDDSURFACEDESC d,
                                        LPDIRECTDRAWSURFACE *out, IUnknown *unk)
 {
     IDirectDrawSurface *front = NULL, *back = NULL;
-    DWORD mem;
     HRESULT r;
 
     if (!IsEngineDD(dd) || !d || !out || !(d->ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE)) {
@@ -533,20 +558,27 @@ static HRESULT WINAPI dd_CreateSurface(IDirectDraw *dd, LPDDSURFACEDESC d,
         return r;
     }
 
-    mem = d->ddsCaps.dwCaps & (DDSCAPS_SYSTEMMEMORY | DDSCAPS_VIDEOMEMORY);
-    r = CreatePlain(dd, mem, &front);
+    r = CreatePlain(dd, &front);
     if (r != DD_OK) {
         RF_Log("ERROR: could not create virtual primary (%08lx)", (unsigned long)r);
         return r;
     }
     if (((d->dwFlags & DDSD_BACKBUFFERCOUNT) && d->dwBackBufferCount) ||
         (d->ddsCaps.dwCaps & DDSCAPS_FLIP)) {
-        if (CreatePlain(dd, mem, &back) != DD_OK)
-            back = NULL;
+        r = CreatePlain(dd, &back);
+        if (r != DD_OK) {
+            RF_Log("ERROR: could not create virtual back buffer (%08lx)", (unsigned long)r);
+            SO(front)->Release(front);
+            return r;
+        }
     }
-    Track(front, back, 0);
-    if (back)
-        Track(back, NULL, 1);
+    if (!Track(dd, front, back, 0) || (back && !Track(dd, back, NULL, 1))) {
+        Untrack(front);
+        if (back)
+            SO(back)->Release(back);
+        SO(front)->Release(front);
+        return DDERR_OUTOFMEMORY;
+    }
     *out = front;
     RF_Log("Primary surface requested (caps %08lx, %lu back buffers) -> virtual %dx%d%s",
            d->ddsCaps.dwCaps, (d->dwFlags & DDSD_BACKBUFFERCOUNT) ? d->dwBackBufferCount : 0,

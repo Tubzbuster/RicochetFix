@@ -19,6 +19,30 @@ static HMODULE g_engine;
 static HMODULE (WINAPI *o_LoadLibraryA)(LPCSTR);
 static HMODULE (WINAPI *o_LoadLibraryExA)(LPCSTR, HANDLE, DWORD);
 
+static char g_gameDir[MAX_PATH];  /* folder of the game .exe, with trailing '\\' */
+
+/* Only modules from the game's own folder (and its subfolders, e.g.
+ * ReflexiveArcade\\) are ever inspected or patched - never system DLLs. */
+static void LongPath(char *path)
+{
+    char tmp[MAX_PATH];
+    DWORD n = GetLongPathNameA(path, tmp, MAX_PATH);  /* PROGRA~1 -> Program Files */
+    if (n && n < MAX_PATH)
+        lstrcpyA(path, tmp);
+}
+
+static int InGameFolder(HMODULE m)
+{
+    char path[MAX_PATH];
+    size_t n = strlen(g_gameDir);
+    if (!m || !n || !GetModuleFileNameA(m, path, MAX_PATH))
+        return 0;
+    path[MAX_PATH - 1] = 0;
+    LongPath(path);
+    return strlen(path) > n &&
+           CompareStringA(LOCALE_INVARIANT, NORM_IGNORECASE, path, (int)n, g_gameDir, (int)n) == CSTR_EQUAL;
+}
+
 static int IsEngine(HMODULE m)
 {
     return m && m != g_self && RF_ModuleImports(m, "ddraw.dll", "DirectDrawCreate");
@@ -39,7 +63,7 @@ static void HookEngine(HMODULE m)
 static void CheckModule(HMODULE m, const char *name)
 {
     const char *base;
-    if (!m || m == g_self)
+    if (!m || m == g_self || !InGameFolder(m))
         return;
     if (!g_engine && IsEngine(m)) {
         HookEngine(m);
@@ -81,7 +105,7 @@ static HMODULE WINAPI hk_LoadLibraryExA(LPCSTR name, HANDLE file, DWORD flags)
  * ReflexiveArcade.dll even if they load after us. */
 static void HookLoaders(HMODULE m)
 {
-    if (!m || m == g_self)
+    if (!m || m == g_self || !InGameFolder(m))
         return;
     RF_PatchIAT(m, "kernel32.dll", "LoadLibraryA", hk_LoadLibraryA, (void **)&o_LoadLibraryA);
     RF_PatchIAT(m, "kernel32.dll", "LoadLibraryExA", hk_LoadLibraryExA, (void **)&o_LoadLibraryExA);
@@ -126,6 +150,13 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
     HMODULE data3;
     (void)reserved;
 
+    if (reason == DLL_PROCESS_DETACH) {
+        /* never leave the mouse trapped if the game exits or crashes out */
+        if (g_hwnd)
+            ClipCursor(NULL);
+        RF_LogClose();
+        return TRUE;
+    }
     if (reason != DLL_PROCESS_ATTACH)
         return TRUE;
 
@@ -139,12 +170,24 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
     RF_LoadConfig();
     RF_LogOpen();
     RF_Log("RicochetFix " RF_VERSION " - https://github.com/Tubzbuster/RicochetFix");
-    if (!RF_LoadRealDll(inst))
-        RF_Log("ERROR: could not load the real system DLL");
+    if (!RF_LoadRealDll(inst)) {
+        /* Without the real DLL every forwarded call would crash the game in
+         * confusing ways. Refuse to load instead: Windows shows an error. */
+        RF_Log("ERROR: could not load the real system DLL - not loading");
+        RF_LogClose();
+        return FALSE;
+    }
 
     if (g_cfg.mode == MODE_OFF) {
         RF_Log("Mode=off: passing everything straight through");
         return TRUE;
+    }
+    if (GetModuleFileNameA(NULL, g_gameDir, MAX_PATH)) {
+        g_gameDir[MAX_PATH - 1] = 0;
+        LongPath(g_gameDir);
+        slash = strrchr(g_gameDir, '\\');
+        if (slash)
+            slash[1] = 0;
     }
     LogGameVersion();
     RF_ReadGameResolution();

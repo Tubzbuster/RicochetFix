@@ -11,7 +11,7 @@
                  Ricochet Lost Worlds
                  Ricochet Lost Worlds: Recharged
   Platform ..... Windows (PC), Wine / Proton / Steam Deck
-  Version ...... 0.1.0 (first build, needs testing on real Windows PCs)
+  Version ...... 0.1.0 (first release, needs testing on real Windows PCs)
   Author ....... tubzbuster & RicochetFix contributors
   License ...... MIT (see LICENSE and DISCLAIMER.md)
   Updated ...... 2026-10-14
@@ -47,7 +47,21 @@
 ================================================================================
 ```
 
-**v0.1.0 (2026-10-14)**: First build. A single `winmm.dll` adds borderless
+**v0.1.0 (2026-10-14)**: First release. Code review fixes before release:
+- the virtual screen surfaces now live in system memory, so they can't be
+  "lost" on alt-tab, the lock screen or a UAC prompt
+- no dangling surfaces when the game closes DirectDraw
+- no leaked surfaces if creating the back buffer fails
+- the game window is forgotten when it's destroyed, so a new one is
+  picked up correctly
+- only modules from the game folder are ever hooked
+- the window refits after a desktop resolution or DPI change
+- the mouse is never left trapped on exit
+- the DLL refuses to load cleanly (instead of crashing later) if the real
+  system DLL is missing
+- the log has a once-a-minute health line (frames, GDI/USER objects)
+
+First build.  A single `winmm.dll` adds borderless
 fullscreen, scaling to any resolution with the 4:3 shape kept, a resizable
 windowed mode (Alt+Enter) and correct mouse mapping to all three games.
 Lost Worlds and Recharged were tested end to end under Wine. Infinity loads
@@ -315,7 +329,9 @@ Engine notes from the reverse engineering are in
 ```
 
 When reporting a problem, open an issue and attach `RicochetFix.log` from
-the game folder. Say which game it is and what you expected to see.
+the game folder. Once a minute the log writes a `Health:` line with the frame
+rate and the GDI/USER object counts. Those counts should stay flat during a
+long session. If they keep climbing, please report it. Say which game it is and what you expected to see.
 
 ```text
 ================================================================================

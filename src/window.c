@@ -18,6 +18,7 @@ static RECT    g_view;         /* where the picture goes, in client pixels */
 static int     g_clientW, g_clientH;
 static int     g_active;
 static int     g_placing;      /* inside our own SetWindowPos */
+static int     g_clipped;      /* we confined the cursor (so we must release it) */
 
 static IDirectDrawSurface *g_pending;  /* frame waiting to be shown */
 static IDirectDrawSurface *g_last;     /* last frame shown (for repaints) */
@@ -67,7 +68,11 @@ static void UpdateCursorClip(void)
     if (!g_hwnd)
         return;
     if (!g_cfg.clipCursor || g_curMode != MODE_BORDERLESS || !g_active || IsIconic(g_hwnd)) {
-        ClipCursor(NULL);
+        /* Only undo a clip we made (or any clip once we lose focus), so a
+         * clip the game set itself survives when ClipCursor=0. */
+        if (g_clipped || !g_active)
+            ClipCursor(NULL);
+        g_clipped = 0;
         return;
     }
     a.x = g_view.left;  a.y = g_view.top;
@@ -76,6 +81,7 @@ static void UpdateCursorClip(void)
     ClientToScreen(g_hwnd, &b);
     SetRect(&r, a.x, a.y, b.x, b.y);
     ClipCursor(&r);
+    g_clipped = 1;
 }
 
 static void ComputePlacement(DWORD *style, DWORD *exStyle, RECT *r)
@@ -182,6 +188,24 @@ static void FillBars(HDC dc)
     if (g_view.right < g_clientW) { SetRect(&r, g_view.right, g_view.top, g_clientW, g_view.bottom); FillRect(dc, &r, black); }
 }
 
+/* Once a minute: frames shown and GDI/USER handle counts. Steady numbers
+ * over a long session mean nothing is leaking. */
+static void LogHealth(void)
+{
+    static DWORD frames, since;
+    DWORD now = GetTickCount();
+    frames++;
+    if (!since)
+        since = now;
+    if (now - since >= 60000) {
+        HANDLE me = GetCurrentProcess();
+        RF_Log("Health: %lu frames in the last minute, GDI objects %lu, USER objects %lu",
+               frames, GetGuiResources(me, GR_GDIOBJECTS), GetGuiResources(me, GR_USEROBJECTS));
+        frames = 0;
+        since = now;
+    }
+}
+
 void RF_Present(IDirectDrawSurface *src)
 {
     HDC sdc, wdc;
@@ -214,6 +238,7 @@ void RF_Present(IDirectDrawSurface *src)
     RF_SurfReleaseDC(src, sdc);
     g_last = src;
     g_lastPresent = GetTickCount();
+    LogHealth();
 }
 
 void RF_MarkPending(IDirectDrawSurface *src)
@@ -309,9 +334,42 @@ static LRESULT CALLBACK RF_WndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
             RF_Present(g_last);
         return r;
 
+    case WM_DISPLAYCHANGE:
+        /* desktop resolution changed: refit the borderless window */
+        r = CallWindowProcA(g_gameProc, h, msg, wp, lp);
+        if (g_curMode == MODE_BORDERLESS)
+            ApplyPlacement(1);
+        return r;
+
+    case WM_DPICHANGED:
+        /* moved to a monitor with different scaling (per-monitor DPI aware) */
+        if (g_curMode == MODE_BORDERLESS) {
+            ApplyPlacement(1);
+        } else {
+            const RECT *nr = (const RECT *)lp;
+            SetWindowPos(h, NULL, nr->left, nr->top, nr->right - nr->left, nr->bottom - nr->top,
+                         SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+        return 0;
+
     case WM_DESTROY:
         ClipCursor(NULL);
+        g_clipped = 0;
         break;
+
+    case WM_NCDESTROY: {
+        /* Forget the window: the engine may create a new one later, and a
+         * destroyed handle can be reused by an unrelated window. */
+        WNDPROC proc = g_gameProc;
+        if (h == g_hwnd) {
+            RF_Log("Game window destroyed");
+            g_hwnd = NULL;
+            g_gameProc = NULL;
+            g_clientW = g_clientH = 0;
+            g_pending = g_last = NULL;
+        }
+        return CallWindowProcA(proc, h, msg, wp, lp);
+    }
     }
     return CallWindowProcA(g_gameProc, h, msg, wp, lp);
 }
@@ -411,7 +469,7 @@ static void MapQueuedMessage(LPMSG msg, int removed)
         return;
     /* Alt+Enter is ours: toggle borderless/windowed and hide the keypress
      * from the engine (it would otherwise also act on Enter). */
-    if (g_cfg.altEnter && msg->wParam == VK_RETURN &&
+    if (g_cfg.altEnter && msg->wParam == VK_RETURN && (msg->lParam & (1 << 29)) &&
         (msg->message == WM_SYSKEYDOWN || msg->message == WM_SYSKEYUP || msg->message == WM_SYSCHAR)) {
         if (removed && msg->message == WM_SYSKEYDOWN && !(msg->lParam & (1 << 30)))
             ToggleMode();

@@ -29,6 +29,7 @@ void RF_ReadGameResolution(void);
 /* ---- log.c ------------------------------------------------------------- */
 void RF_LogOpen(void);
 void RF_Log(const char *fmt, ...);
+void RF_LogClose(void);
 
 /* ---- iat.c ------------------------------------------------------------- */
 int RF_PatchIAT(HMODULE mod, const char *dll, const char *func, void *hook, void **orig);
