@@ -1,8 +1,19 @@
 ```
 ================================================================================
-  PROPOSAL: SIDE-BAR BORDERS  (v0.2, awaiting approval - not implemented)
+  SIDE-BAR BORDERS  (v0.2 - Border=ambient implemented)
 ================================================================================
 ```
+
+> **Decision (2026-10-15):** `Border=ambient` was chosen and implemented
+> (`src/border.c`) and is the default, with `Border=black` as the
+> alternative. The `hangar` frame, the "RICOCHETFIX" plate and
+> `Border=image` were dropped: the fix shouldn't add designs of its own to
+> the games. The rest of this page is the original proposal, kept for
+> reference.
+>
+> **Measured under Wine at 1080p:** 0.36 ms average per border update,
+> 3.4 ms worst case, at most 30 updates a second. Static scenes are skipped
+> entirely. Verified at 1080p, 1440p and 4K.
 
 In borderless mode on a 16:9 monitor, the 4:3 picture leaves a black bar on
 each side (240 px each at 1920x1080). This proposal fills those bars with a

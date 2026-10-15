@@ -211,6 +211,7 @@ so tell it to load ours. In Steam, set the game's launch options to:
   ---------------  ----------------------------------  -----------
   Mode             borderless / windowed / off         borderless
   Scaling          smooth / sharp / integer / stretch  smooth
+  Border           ambient / black                    ambient
   WindowScale      0 = auto (~85% of screen), 1, 2..   0
   VSync            1 / 0                               1
   ClipCursor       1 / 0  (keep mouse in the picture)  1

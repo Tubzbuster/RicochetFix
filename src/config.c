@@ -23,6 +23,7 @@ void RF_LoadConfig(void)
 {
     static const char *const modes[] = { "off", "borderless", "windowed" };
     static const char *const scales[] = { "smooth", "sharp", "integer", "stretch" };
+    static const char *const borders[] = { "black", "ambient" };
     char ini[MAX_PATH];
 
     lstrcpynA(ini, g_rfDir, MAX_PATH - 20);
@@ -30,6 +31,7 @@ void RF_LoadConfig(void)
 
     g_cfg.mode        = ReadChoice(ini, "Display", "Mode", "borderless", modes, 3);
     g_cfg.scaling     = ReadChoice(ini, "Display", "Scaling", "smooth", scales, 4);
+    g_cfg.border      = ReadChoice(ini, "Display", "Border", "ambient", borders, 2);
     g_cfg.windowScale = GetPrivateProfileIntA("Display", "WindowScale", 0, ini);
     g_cfg.vsync       = GetPrivateProfileIntA("Display", "VSync", 1, ini);
     g_cfg.clipCursor  = GetPrivateProfileIntA("Display", "ClipCursor", 1, ini);

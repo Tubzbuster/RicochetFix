@@ -12,7 +12,7 @@ LDFLAGS = -shared -static -static-libgcc -s -Wl,--enable-stdcall-fixup \
           -Wl,--subsystem,windows
 LIBS    = -luser32 -lgdi32 -lversion
 
-SRCS = src/main.c src/proxy.c src/window.c src/ddraw_hooks.c src/iat.c src/config.c src/log.c
+SRCS = src/main.c src/proxy.c src/window.c src/border.c src/ddraw_hooks.c src/iat.c src/config.c src/log.c
 GEN  = src/proxy_names.h src/proxy_stubs.S src/proxy.def
 
 all: build/winmm.dll

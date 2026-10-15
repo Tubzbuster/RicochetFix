@@ -10,10 +10,12 @@
 /* ---- config.c ---------------------------------------------------------- */
 enum { MODE_OFF, MODE_BORDERLESS, MODE_WINDOWED };
 enum { SCALE_SMOOTH, SCALE_SHARP, SCALE_INTEGER, SCALE_STRETCH };
+enum { BORDER_BLACK, BORDER_AMBIENT };
 
 typedef struct {
     int mode;           /* MODE_* */
     int scaling;        /* SCALE_* */
+    int border;         /* BORDER_*: what fills the bars beside the picture */
     int windowScale;    /* windowed size multiplier, 0 = largest that fits */
     int vsync;          /* wait for DWM after page flips */
     int clipCursor;     /* keep the mouse inside the picture (borderless) */
@@ -48,6 +50,12 @@ void RF_MarkPending(IDirectDrawSurface *src);
 void RF_FlushPending(void);
 void RF_ForgetSurface(IDirectDrawSurface *s);
 void RF_WaitVSync(void);
+
+/* ---- border.c ---------------------------------------------------------- */
+void RF_BorderDraw(HDC wdc, HDC sdc, int gameW, int gameH, const RECT *view, int cw, int ch);
+void RF_BorderInvalidate(void);
+void RF_BorderFree(void);
+void RF_BorderStats(double *avgMs, double *maxMs, unsigned long *updates);
 
 /* ---- ddraw_hooks.c ----------------------------------------------------- */
 void RF_HookDirectDraw(HMODULE engine);

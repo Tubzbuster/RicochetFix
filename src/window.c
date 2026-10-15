@@ -58,6 +58,7 @@ static void UpdateLayout(void)
     g_view.top = (ch - vh) / 2;
     g_view.right = g_view.left + vw;
     g_view.bottom = g_view.top + vh;
+    RF_BorderInvalidate();
 }
 
 static void UpdateCursorClip(void)
@@ -178,16 +179,6 @@ void RF_SetGameSize(int w, int h)
 
 /* ---- presenting -------------------------------------------------------- */
 
-static void FillBars(HDC dc)
-{
-    HBRUSH black = (HBRUSH)GetStockObject(BLACK_BRUSH);
-    RECT r;
-    if (g_view.top > 0)       { SetRect(&r, 0, 0, g_clientW, g_view.top); FillRect(dc, &r, black); }
-    if (g_view.bottom < g_clientH) { SetRect(&r, 0, g_view.bottom, g_clientW, g_clientH); FillRect(dc, &r, black); }
-    if (g_view.left > 0)      { SetRect(&r, 0, g_view.top, g_view.left, g_view.bottom); FillRect(dc, &r, black); }
-    if (g_view.right < g_clientW) { SetRect(&r, g_view.right, g_view.top, g_clientW, g_view.bottom); FillRect(dc, &r, black); }
-}
-
 /* Once a minute: frames shown and GDI/USER handle counts. Steady numbers
  * over a long session mean nothing is leaking. */
 static void LogHealth(void)
@@ -199,8 +190,13 @@ static void LogHealth(void)
         since = now;
     if (now - since >= 60000) {
         HANDLE me = GetCurrentProcess();
-        RF_Log("Health: %lu frames in the last minute, GDI objects %lu, USER objects %lu",
-               frames, GetGuiResources(me, GR_GDIOBJECTS), GetGuiResources(me, GR_USEROBJECTS));
+        double avg, worst;
+        unsigned long updates;
+        RF_BorderStats(&avg, &worst, &updates);
+        RF_Log("Health: %lu frames in the last minute, GDI objects %lu, USER objects %lu, "
+               "border %lu updates avg %.2f ms max %.2f ms",
+               frames, GetGuiResources(me, GR_GDIOBJECTS), GetGuiResources(me, GR_USEROBJECTS),
+               updates, avg, worst);
         frames = 0;
         since = now;
     }
@@ -221,7 +217,6 @@ void RF_Present(IDirectDrawSurface *src)
     if (wdc) {
         vw = g_view.right - g_view.left;
         vh = g_view.bottom - g_view.top;
-        FillBars(wdc);
         if (vw == g_gameW && vh == g_gameH) {
             BitBlt(wdc, g_view.left, g_view.top, vw, vh, sdc, 0, 0, SRCCOPY);
         } else {
@@ -233,6 +228,7 @@ void RF_Present(IDirectDrawSurface *src)
             }
             StretchBlt(wdc, g_view.left, g_view.top, vw, vh, sdc, 0, 0, g_gameW, g_gameH, SRCCOPY);
         }
+        RF_BorderDraw(wdc, sdc, g_gameW, g_gameH, &g_view, g_clientW, g_clientH);
         ReleaseDC(g_hwnd, wdc);
     }
     RF_SurfReleaseDC(src, sdc);
@@ -330,6 +326,7 @@ static LRESULT CALLBACK RF_WndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
     case WM_PAINT:
         r = CallWindowProcA(g_gameProc, h, msg, wp, lp);
         ValidateRect(h, NULL);
+        RF_BorderInvalidate();
         if (g_last)
             RF_Present(g_last);
         return r;
@@ -367,6 +364,7 @@ static LRESULT CALLBACK RF_WndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
             g_gameProc = NULL;
             g_clientW = g_clientH = 0;
             g_pending = g_last = NULL;
+            RF_BorderFree();
         }
         return CallWindowProcA(proc, h, msg, wp, lp);
     }
