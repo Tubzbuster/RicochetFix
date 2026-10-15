@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <ddraw.h>
 
-#define RF_VERSION "0.1.0"
+#define RF_VERSION "0.2.0"
 
 /* ---- config.c ---------------------------------------------------------- */
 enum { MODE_OFF, MODE_BORDERLESS, MODE_WINDOWED };

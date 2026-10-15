@@ -1,9 +1,18 @@
-## RicochetFix v0.1.0
+## RicochetFix v0.2.0
 
 Borderless fullscreen and proper scaling for **Ricochet Infinity**, **Ricochet Lost Worlds** and **Ricochet Lost Worlds: Recharged**. One DLL works for all three.
 
+### New in 0.2.0: ambient borders
+On widescreen monitors, the bars beside the 4:3 picture now show a soft, dimmed blur of the picture's own edges instead of plain black. Nothing of our own is drawn into the game.
+- `Border=ambient` (default) or `Border=black` in `RicochetFix.ini`
+- Sized for 1080p and scaled to your resolution, so it looks the same at 1440p and 4K
+- Lightweight: about 0.36 ms per update on average, at most 30 updates a second, and nothing at all in static scenes
+- Falls back to black bars if anything goes wrong; its cost is reported in the log's `Health:` line
+
+Upgrading from 0.1.0: replace `winmm.dll`, and add `Border=ambient` (or `Border=black`) to your `RicochetFix.ini`. Ambient is used automatically if the line is missing.
+
 ### Install
-1. Download `RicochetFix-0.1.0.zip` below.
+1. Download `RicochetFix-0.2.0.zip` below.
 2. Extract `winmm.dll` and `RicochetFix.ini` next to the game's exe:
    - Ricochet Infinity: `RicochetInfinity.exe`
    - Ricochet Lost Worlds: `Ricochet.exe`
@@ -19,9 +28,6 @@ On Linux / Steam Deck (Wine or Proton), use the launch option `WINEDLLOVERRIDES=
 - Instant alt-tab; the mouse lines up with the scaled picture
 - Fixes "Couldn't set resolution" on monitors without an 800x600 mode
 
-### Status
-- **Lost Worlds** and **Recharged** were tested under Wine: menus, mouse, Alt+Enter and exiting.
-- **Infinity** loads and hooks correctly but hasn't been tested on Windows yet.
-- This is the first release. Please report problems with your `RicochetFix.log` attached.
+Please report problems with your `RicochetFix.log` attached.
 
 Unofficial fan project, not affiliated with Reflexive Entertainment. It contains no game code. MIT licensed and provided as is.

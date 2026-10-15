@@ -11,7 +11,7 @@
                  Ricochet Lost Worlds
                  Ricochet Lost Worlds: Recharged
   Platform ..... Windows (PC), Wine / Proton / Steam Deck
-  Version ...... 0.1.0 
+  Version ...... 0.2.0 
   Author ....... tubzbuster & RicochetFix contributors
   License ...... MIT (see LICENSE and DISCLAIMER.md)
   Updated ...... 2026-10-14
@@ -46,6 +46,14 @@
 [RF00]                         VERSION HISTORY
 ================================================================================
 ```
+
+**v0.2.0 (2026-10-15)**: Ambient borders. On widescreen monitors, the bars
+beside the 4:3 picture now show a soft, dimmed blur of the picture's own
+edges instead of plain black (`Border=ambient`, the default; `Border=black`
+keeps the old look). Nothing of our own is drawn into the game. It's sized
+for 1080p and scales with your resolution. It's cheap: 0.36 ms on average
+per update, and it skips static scenes. Black bars are no longer repainted
+every frame.
 
 **v0.1.0 (2026-10-14)**: First release. Code review fixes before release:
 - the virtual screen surfaces now live in system memory, so they can't be
